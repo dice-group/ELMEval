@@ -4,15 +4,16 @@ from openai import OpenAI
 import ast
 from tqdm import tqdm
 # Initialize OpenAI client
-client = OpenAI(api_key="<your-OpenAI-key>")
+client = OpenAI(api_key="<OpenAI-key>")
 
 def query_llm(example):
     """
     Send a prompt to the LLM and return the response.
     """
+    print(example)
     response = client.chat.completions.create(
         messages=example,
-        model="gpt-4-0125-preview", #change the model to model="gpt-3.5-turbo if you want to use gpt-3.5 
+        model="ft:gpt-4o-2024-08-06:personal:elevate-id-mix:ATTQbjfY"#"ft:gpt-4o-2024-08-06:personal:indel:AT4C3C4Y", #change the model to model="gpt-3.5-turbo if you want to use gpt-3.5 
     )
     return {"response": response.choices[0].message.content}
 
@@ -29,7 +30,7 @@ def create_input_prompt(example):
             {"role": "user", "content": example["sentence"]},
         ]
     }
-def read_first_few_lines(file_path, num_lines=2):
+def read_first_few_lines(file_path, num_lines=0):
     lines = []
     try:
         with open(file_path, 'r') as file:
@@ -51,6 +52,7 @@ linking_results = []
 for line in tqdm(first_few_lines):
     line = ast.literal_eval(line)
     results = query_llm(line["content"]["messages"])
+    print(results)
     if len(results["response"]) == 0:
         results["response"] = []
     linking_results.append((line['sent_id'], results['response']))

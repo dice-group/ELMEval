@@ -20,26 +20,22 @@ warnings.filterwarnings("ignore", category=FutureWarning, message="`--push_to_hu
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 # Setting parameters
-domain = "general-domain"
-base_model_name = "meta-llama/Meta-Llama-3-8B-Instruct" # other models: Ichsan2895/Merak-7B-v4
+domain = "specific-domain"
+base_model_name = "meta-llama/Meta-Llama-3-70B-Instruct" # other models: Ichsan2895/Merak-7B-v4
 
 tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True, max_length=512)
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
 
 # Read CSV files
-train_df = pd.read_csv("../datasets/{domain}/train_set.txt")
-val_df = pd.read_csv("../datasets/{domain}/val_set.txt")
-test_df = pd.read_csv("../datasets/{domain}/test_set.txt")
+train_df = pd.read_csv(f"../../datasets/{domain}/train_set.txt")
+val_df = pd.read_csv(f"../../datasets/{domain}/val_set.txt")
 
 print("Train DataFrame:")
 print(train_df.head())
 
 print("\nValidation DataFrame:")
 print(val_df.head())
-
-print("\nTest DataFrame:")
-print(test_df.head())
 
 system_message = """
 Find entities and their corresponding entry links in Wikidata within the following sentence.
@@ -62,17 +58,15 @@ def prepare_examples(example):
 # Convert DataFrame to Dataset
 train_dataset = Dataset.from_pandas(train_df)
 val_dataset = Dataset.from_pandas(val_df)
-test_dataset = Dataset.from_pandas(test_df)
 
 # Apply the prepare_examples function
 train_dataset = train_dataset.map(prepare_examples, remove_columns=['sentence', 'entities', 'uris'])
 val_dataset = val_dataset.map(prepare_examples, remove_columns=['sentence', 'entities', 'uris'])
-test_dataset = test_dataset.map(prepare_examples, remove_columns=['sentence', 'entities', 'uris'])
 
 # Disable tokenizers parallelism
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-output_dir = "./fine-tuning-results/{domain}/{base_model_name}"
+output_dir = f"./fine-tuning-results/{domain}/{base_model_name}"
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -80,7 +74,7 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_compute_dtype=torch.float16,
     bnb_4bit_use_double_quant=False
 )
-device_map = {"": "cuda"}
+device_map = "auto"#{"": "cuda"}
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
     quantization_config=bnb_config,
@@ -108,10 +102,10 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 training_args = TrainingArguments(
     output_dir=output_dir,
     num_train_epochs=3,
-    per_device_train_batch_size=8,  # Increased batch size
+    per_device_train_batch_size=2,  # Increased batch size
     gradient_accumulation_steps=4,
     optim="paged_adamw_32bit",
-    save_steps=10,
+    save_steps=500,
     learning_rate=2e-4,
     weight_decay=0.001,
     fp16=False,  # Enable mixed precision training

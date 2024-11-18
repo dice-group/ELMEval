@@ -39,14 +39,12 @@ def generate_answer(example):
 ]
     
     outputs = pipe(prompt,
-                max_new_tokens=256,
+                max_new_tokens=100,
                 eos_token_id=terminators,
                 do_sample=True,
-                temperature=0.6,
-                top_k=50,
-                top_p=0.9,
+                temperature=0.3
                 )
-    generated_text = outputs[0]['generated_text']
+    generated_text = outputs[0]['generated_text'][len(prompt):]
     return {"sent_id": example["sent_id"], "sentence": example["messages"][1]['content'], "generated_text": generated_text}
 
 def create_input_prompt(example):
@@ -59,8 +57,8 @@ def create_input_prompt(example):
 
 # setting-parameters
 domain = "general-domain"
-base_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-
+base_model_name = "fine-tuning-results/mix-domain/meta-llama/Meta-Llama-3-70B-Instruct/checkpoint-1404"
+#base_model_name = "meta-llama/Llama-3.2-3B-Instruct"
 # Read CSV files
 test_df = pd.read_csv(f"../../datasets/{domain}/test_set.txt")
 
@@ -107,9 +105,9 @@ if not os.path.exists(f"{directory_data}/{domain}/{base_model_name.split('/')[-1
 f = open(f"data/{domain}/{base_model_name.split('/')[-1]}/results.txt", "w")
 for result in results:
     # Extract values from the output
-    values = extract_first_assistant_values(result['generated_text'])
+    values = result['generated_text'] #extract_first_assistant_values(result['generated_text'])
     print(result['sent_id'], result['sentence'])
-    print(values)
+    print(result)
     print("")
     f.write(f"{result['sent_id']}\t{values}\n")
 f.close()
